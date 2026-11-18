@@ -1,0 +1,1 @@
+# Generated Harmony release obfuscation rules.

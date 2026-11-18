@@ -1,0 +1,2 @@
+.load-error { min-height: 70vh; display: flex; align-items: center; justify-content: center; flex-direction: column; padding: 32rpx; color: #555; }
+.load-error button { margin-top: 32rpx; }

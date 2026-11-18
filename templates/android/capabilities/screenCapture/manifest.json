@@ -1,0 +1,5 @@
+{
+  "queries": "",
+  "application": "        <!-- 屏幕共享（screenCapture）：前台服务持有 MediaProjection 与租约；通知里的「停止」走 StopScreenCaptureService。 -->\n        <service\n            android:name=\".ScreenCaptureService\"\n            android:exported=\"false\"\n            android:foregroundServiceType=\"mediaProjection\" />\n        <service\n            android:name=\".StopScreenCaptureService\"\n            android:exported=\"false\" />",
+  "permissions": "    <uses-permission android:name=\"android.permission.FOREGROUND_SERVICE\" />\n    <uses-permission android:name=\"android.permission.FOREGROUND_SERVICE_MEDIA_PROJECTION\" />\n    <uses-permission android:name=\"android.permission.POST_NOTIFICATIONS\" />"
+}

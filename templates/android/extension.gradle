@@ -1,0 +1,37 @@
+// 业务扩展模块（android.extension）：由 appshell prebuild 生成，不要手改。
+// 源码来自 App 仓库 android.extension.dir 的 src/；依赖来自 android.extension.dependencies。
+import groovy.json.JsonSlurper
+
+apply plugin: 'com.android.library'
+apply plugin: 'org.jetbrains.kotlin.android'
+
+def shell = new JsonSlurper().parse(rootProject.file('appshell.json'))
+
+android {
+    namespace = "org.appshell.extension"
+    compileSdk = rootProject.ext.compileSdkVersion
+    defaultConfig {
+        minSdkVersion rootProject.ext.minSdkVersion
+        targetSdkVersion rootProject.ext.targetSdkVersion
+    }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_21
+        targetCompatibility JavaVersion.VERSION_21
+    }
+    kotlinOptions { jvmTarget = '21' }
+    sourceSets {
+        main.java.srcDirs += 'src/main/kotlin'
+        test.java.srcDirs += 'src/test/kotlin'
+    }
+    testOptions {
+        unitTests.returnDefaultValues = true
+    }
+}
+
+dependencies {
+    implementation project(':capacitor-android')
+    implementation "androidx.appcompat:appcompat:$androidxAppCompatVersion"
+    implementation "androidx.core:core:$androidxCoreVersion"
+    shell.extension.dependencies.each { implementation it }
+    testImplementation "junit:junit:$junitVersion"
+}

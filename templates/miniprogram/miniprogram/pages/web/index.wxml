@@ -1,0 +1,5 @@
+<view wx:if="{{loadError}}" class="load-error">
+  <text>页面加载失败，请检查网络后重试。</text>
+  <button bindtap="onRetry">重试</button>
+</view>
+<web-view wx:elif="{{webViewUrl}}" src="{{webViewUrl}}" bindload="onWebLoad" binderror="onWebError" />

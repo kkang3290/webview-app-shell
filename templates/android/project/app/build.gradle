@@ -1,0 +1,167 @@
+apply plugin: 'com.android.application'
+
+import groovy.json.JsonSlurper
+
+// 本工程由 `appshell prebuild android` 生成，唯一输入是根目录的 appshell.json。
+// 不要手改这里：改 App 仓库的 appshell.config.json 后重新 prebuild。
+def shellFile = rootProject.file('appshell.json')
+if (!shellFile.isFile()) {
+    throw new GradleException("缺少 ${shellFile}；先在 App 仓库运行 appshell prebuild android --env <环境>")
+}
+def shell = new JsonSlurper().parse(shellFile)
+if (shell.schemaVersion != 1) {
+    throw new GradleException("appshell.json schemaVersion 不受支持：${shell.schemaVersion}")
+}
+def capabilities = shell.capabilities as List
+if (shell.kotlin) {
+    apply plugin: 'org.jetbrains.kotlin.android'
+}
+
+// 签名材料不进版本库：路径来自 appshell.config.json 的 android.signing.propertiesFile。
+// 缺配置时 release 打包直接失败——未签名的 APK 装不上，静默出一个只会浪费一轮排查。
+def keystoreProps = new Properties()
+def keystorePropsFile = shell.signing?.propertiesFile ? new File(shell.signing.propertiesFile as String) : null
+if (keystorePropsFile?.isFile()) {
+    keystorePropsFile.withInputStream { keystoreProps.load(it) }
+}
+def keystoreBase = keystorePropsFile?.parentFile
+def hasSigningConfig = ['storeFile', 'storePassword', 'keyAlias', 'keyPassword']
+    .every { keystoreProps.getProperty(it)?.trim() }
+
+android {
+    // Java / R 命名空间固定，与安装包名无关；微信回调由 Manifest 的 activity-alias 按 applicationId 映射。
+    namespace = "org.appshell"
+    compileSdk = rootProject.ext.compileSdkVersion
+    defaultConfig {
+        applicationId shell.applicationId
+        minSdkVersion rootProject.ext.minSdkVersion
+        targetSdkVersion rootProject.ext.targetSdkVersion
+        versionCode shell.versionCode
+        versionName shell.versionName
+        def placeholders = [:]
+        if (shell.push?.provider == 'jpush') {
+            // 极光与厂商通道的密钥由 appshell.config.json 注入（OPPO / 魅族前缀已在生成时加好）。
+            placeholders += [JPUSH_PKGNAME: shell.applicationId] + shell.push.placeholders
+        } else if (shell.push) {
+            // 个推 AppID、厂商通道参数与点开通知的入口（tap）
+            placeholders += shell.push.placeholders
+        }
+        // 业务扩展模块 Manifest 里引用的占位符在 App 合并时解析
+        if (shell.extension) placeholders += shell.extension.manifestPlaceholders
+        manifestPlaceholders = placeholders
+        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+        aaptOptions {
+            // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
+            ignoreAssetsPattern = '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
+        }
+    }
+    if (shell.kotlin) {
+        kotlinOptions { jvmTarget = '21' }
+    }
+    testOptions {
+        // 插件单测会碰到 android.util.Log 等；不打桩直接抛异常，测试里看不出真正的问题
+        unitTests.returnDefaultValues = true
+    }
+    signingConfigs {
+        release {
+            if (hasSigningConfig) {
+                def store = new File(keystoreProps.getProperty('storeFile'))
+                storeFile store.isAbsolute() ? store : new File(keystoreBase, store.path)
+                storePassword keystoreProps.getProperty('storePassword')
+                keyAlias keystoreProps.getProperty('keyAlias')
+                keyPassword keystoreProps.getProperty('keyPassword')
+            }
+        }
+    }
+    buildTypes {
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+            signingConfig hasSigningConfig ? signingConfigs.release : null
+        }
+    }
+}
+
+tasks.whenTaskAdded { task ->
+    if (task.name.startsWith('package') && task.name.endsWith('Release') && !hasSigningConfig) {
+        task.doFirst {
+            throw new GradleException(
+                "缺少签名配置：${keystorePropsFile ?: 'android.signing.propertiesFile 未配置'}\n" +
+                "需要 storeFile / storePassword / keyAlias / keyPassword 四项"
+            )
+        }
+    }
+}
+
+// 内嵌 Web 包必须是 prebuild 为同一 appId / 环境 / 版本写入的；挡住手工拷贝的旧包。
+def embeddedWebRoot = file('src/main/assets/public')
+def embeddedManifest = new File(embeddedWebRoot, 'appshell-build.json')
+def verifyEmbeddedWebBundle = tasks.register('verifyEmbeddedWebBundle') {
+    inputs.files(embeddedManifest, new File(embeddedWebRoot, 'index.html'))
+    doLast {
+        if (!embeddedManifest.isFile() || !new File(embeddedWebRoot, 'index.html').isFile()) {
+            throw new GradleException("缺少内嵌 Web 包；重新运行 appshell prebuild android")
+        }
+        def manifest = new JsonSlurper().parse(embeddedManifest)
+        if (manifest.schemaVersion != 1 || manifest.appId != shell.applicationId ||
+            manifest.environment != shell.environment ||
+            manifest.app?.version != shell.versionName || manifest.app?.build != shell.versionCode) {
+            throw new GradleException("内嵌 Web 包与 appshell.json 不一致；重新运行 appshell prebuild android")
+        }
+    }
+}
+tasks.named('preBuild').configure { dependsOn verifyEmbeddedWebBundle }
+
+repositories {
+    flatDir{
+        dirs '../capacitor-cordova-android-plugins/src/main/libs', 'libs'
+    }
+}
+
+dependencies {
+    implementation fileTree(include: ['*.jar'], dir: 'libs')
+    implementation "androidx.appcompat:appcompat:$androidxAppCompatVersion"
+    implementation "androidx.coordinatorlayout:coordinatorlayout:$androidxCoordinatorLayoutVersion"
+    implementation "androidx.core:core-splashscreen:$coreSplashScreenVersion"
+    implementation project(':capacitor-android')
+    if (capabilities.contains('backgroundUpload')) {
+        implementation "androidx.work:work-runtime:2.10.0"
+    }
+    if (shell.push?.provider == 'getui') {
+        shell.push.dependencies.each { dep ->
+            implementation(dep.notation) { dep.excludes.each { group -> exclude group: group } }
+        }
+    } else if (shell.push) {
+        // 版本钉死：小米插件在 Maven 上的「最新版」标记是一个测试版。
+        implementation "cn.jiguang.sdk:jpush:${shell.push.sdkVersion}"
+        shell.push.channels.each { channel ->
+            implementation "cn.jiguang.sdk.plugin:${channel}:${shell.push.sdkVersion}"
+        }
+        if (shell.push.channels.contains('oppo')) {
+            implementation 'com.google.code.gson:gson:2.10.1'
+            implementation 'androidx.annotation:annotation:1.9.1'
+        }
+    }
+    if (capabilities.contains('screenCapture')) {
+        // RTMPS 推流与 H.264 编码（JitPack）；采集服务与租约循环用协程
+        implementation 'com.github.pedroSG94.RootEncoder:library:2.8.1'
+        implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.10.2'
+        testImplementation 'org.json:json:20250517'
+    }
+    if (shell.extension) {
+        implementation project(":${shell.extension.module}")
+    }
+    if (capabilities.contains('wechat')) {
+        implementation "com.tencent.mm.opensdk:wechat-sdk-android:6.8.40"
+    }
+    testImplementation "junit:junit:$junitVersion"
+    androidTestImplementation "androidx.test.ext:junit:$androidxJunitVersion"
+    androidTestImplementation "androidx.test.espresso:espresso-core:$androidxEspressoCoreVersion"
+    implementation project(':capacitor-cordova-android-plugins')
+}
+
+apply from: 'capacitor.build.gradle'
+
+if (shell.push?.huaweiServicesFile) {
+    apply plugin: 'com.huawei.agconnect'
+}

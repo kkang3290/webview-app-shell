@@ -1,0 +1,43 @@
+// Top-level build file where you can add configuration options common to all sub-projects/modules.
+
+// 华为推送通道（极光）需要 AGConnect 插件与华为仓库；只在 appshell.json 启用华为通道时引入。
+def appshellShell = new groovy.json.JsonSlurper().parse(file('appshell.json'))
+def appshellHuawei = appshellShell.push?.huaweiServicesFile != null
+// 推送 SDK（个推）、屏幕共享（RootEncoder 在 JitPack）、业务扩展声明的额外仓库，由 prebuild 汇总
+def appshellRepositories = (appshellShell.repositories ?: []) as List
+
+buildscript {
+    def shell = new groovy.json.JsonSlurper().parse(file('appshell.json'))
+    def huawei = shell.push?.huaweiServicesFile != null
+    // Kotlin：屏幕共享模板与业务扩展模块用到时才引入插件
+    def kotlin = shell.kotlin || shell.extension != null
+    repositories {
+        google()
+        mavenCentral()
+        if (huawei) maven { url 'https://developer.huawei.com/repo/' }
+    }
+    dependencies {
+        classpath 'com.android.tools.build:gradle:8.13.0'
+        classpath 'com.google.gms:google-services:4.4.4'
+        if (huawei) classpath 'com.huawei.agconnect:agcp:1.9.1.301'
+        if (kotlin) classpath 'org.jetbrains.kotlin:kotlin-gradle-plugin:2.2.21'
+
+        // NOTE: Do not place your application dependencies here; they belong
+        // in the individual module build.gradle files
+    }
+}
+
+apply from: "variables.gradle"
+
+allprojects {
+    repositories {
+        google()
+        mavenCentral()
+        if (appshellHuawei) maven { url 'https://developer.huawei.com/repo/' }
+        appshellRepositories.each { repo -> maven { url repo } }
+    }
+}
+
+task clean(type: Delete) {
+    delete rootProject.buildDir
+}

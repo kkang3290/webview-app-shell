@@ -1,0 +1,4 @@
+{
+  "//": "模板按 CommonJS 加载（prebuild 会用生成的 package.json 覆盖它）",
+  "type": "commonjs"
+}

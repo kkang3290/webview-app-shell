@@ -1,0 +1,5 @@
+{
+  "queries": "",
+  "application": "        <!-- 极光要求的自定义 Service 与回调 Receiver（JPush 5.4.0 起 action 必须是 RECEIVER_MESSAGE）。 -->\n        <service\n            android:name=\".PushCommonService\"\n            android:enabled=\"true\"\n            android:exported=\"false\"\n            android:process=\":pushcore\">\n            <intent-filter>\n                <action android:name=\"cn.jiguang.user.service.action\" />\n            </intent-filter>\n        </service>\n        <receiver\n            android:name=\".PushMessageReceiver\"\n            android:enabled=\"true\"\n            android:exported=\"false\">\n            <intent-filter>\n                <action android:name=\"cn.jpush.android.intent.RECEIVER_MESSAGE\" />\n                <category android:name=\"${applicationId}\" />\n            </intent-filter>\n        </receiver>",
+  "permissions": ""
+}

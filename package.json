@@ -1,0 +1,46 @@
+{
+  "name": "webview-app-shell",
+  "version": "0.17.2",
+  "private": false,
+  "description": "通用 App 外壳：构建 Android / iOS / 桌面安装包、热更新包及微信小程序，并统一上传发布",
+  "type": "module",
+  "license": "MIT",
+  "packageManager": "npm@11.11.0",
+  "bin": {
+    "appshell": "bin/appshell.mjs"
+  },
+  "files": [
+    "CHANGELOG.md",
+    "README.md",
+    "LICENSE",
+    "THIRD_PARTY_NOTICES.md",
+    "bin",
+    "docs",
+    "examples",
+    "src",
+    "templates",
+    "web"
+  ],
+  "exports": {
+    "./web": {
+      "types": "./web/index.d.ts",
+      "default": "./web/index.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "scripts": {
+    "test": "node --test test/*.test.mjs",
+    "check": "node --check bin/appshell.mjs && node --test test/*.test.mjs"
+  },
+  "dependencies": {
+    "@capacitor/android": "8.5.3",
+    "@capacitor/cli": "8.5.3",
+    "@capacitor/core": "8.5.3",
+    "@capacitor/ios": "8.5.3",
+    "electron-builder": "26.18.0",
+    "miniprogram-ci": "2.1.31"
+  },
+  "engines": {
+    "node": ">=22.18.0"
+  }
+}

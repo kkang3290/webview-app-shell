@@ -1,0 +1,59 @@
+{
+  "schemaVersion": 1,
+  "engine": "webview",
+  "app": { "name": "ExampleApp", "version": "1.0.0" },
+  "web": {
+    "command": ["npm", "run", "build"],
+    "outDir": "dist",
+    "version": { "packageJson": "package.json" }
+  },
+  "environments": {
+    "test": { "buildEnv": {}, "artifactEnvironment": "test", "desktop": null },
+    "prod": { "buildEnv": {}, "artifactEnvironment": "prod", "desktop": null }
+  },
+  "capabilities": [],
+  "permissions": [],
+  "navigation": {
+    "nativeBackEvent": "appshell:back",
+    "rootPages": [{ "path": "/", "childQuery": [] }],
+    "shortcuts": []
+  },
+  "theme": {
+    "startupBackground": "#FFFFFF",
+    "startupInk": "#111111",
+    "startupActive": "#3366CC",
+    "legacyNavigationBar": "#FFFFFF"
+  },
+  "strings": { "backAgainToDesktop": "再按一次返回桌面" },
+  "wechat": null,
+  "push": null,
+  "screenCapture": null,
+  "android": {
+    "applicationId": "com.example.app",
+    "versionCode": 1,
+    "storageDir": "ExampleApp",
+    "resources": "resources/android",
+    "nativeHttp": false,
+    "signing": { "propertiesFile": null },
+    "hotUpdate": null,
+    "legacyActivities": [],
+    "extension": null
+  },
+  "ios": {
+    "bundleId": "com.example.app",
+    "version": "1.0.0",
+    "buildNumber": 1,
+    "deploymentTarget": "17.0",
+    "deviceFamily": "1,2",
+    "teamId": null,
+    "resources": "resources/ios",
+    "nativeHttp": false,
+    "backgroundRecording": false,
+    "pullToRefresh": { "enabled": false, "blockSelector": null },
+    "usageDescriptions": {},
+    "extension": null,
+    "hotUpdate": null
+  },
+  "desktop": null,
+  "release": null
+}
